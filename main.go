@@ -122,7 +122,11 @@ func openFolderDialog(textBox *walkMain.TextEdit) {
 
 func main() {
 	var inputFileBox *walkMain.TextEdit
-	//	var costBox *walkMain.TextEdit
+	defer func() {
+		if err := recover(); err != nil {
+			panicAndLog(fmt.Sprintf("main>panic: %v", err))
+		}
+	}()
 
 	walk.MainWindow{
 		Title:   "Cost Calculator",
