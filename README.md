@@ -11,7 +11,7 @@
 
 3. Extract and cd into the directory `cd costcalculator`
 4. Automatically install all required dependencies by running `go mod download`
-5. Build! `go build`
+5. Build! `go build -x -ldflags="-H windowsgui"`
 6. Run `costCalculator.exe`
 
 ## Usage instruction
