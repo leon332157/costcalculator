@@ -43,7 +43,7 @@ func fatalDialogAndLog(err string) {
 }
 
 // scanFolder returns a slice of all valid file paths in the given folder
-func scanFolder(path string) []string {
+func scanFolder(path string) ([]string, error) {
 	var validPaths []string
 	pattern := regexp.MustCompile(`[ _A-Za-z0-9]+_[0-9]*[.0-9]+[a-z]{3}`)
 	var walkFunc = func(path string, info os.FileInfo, err error) error {
@@ -62,9 +62,9 @@ func scanFolder(path string) []string {
 	}
 	err := filepath.Walk(path, walkFunc)
 	if err != nil {
-		fatalDialog("scanFolder>filepath.Walk" + err.Error())
+		return nil, err
 	}
-	return validPaths
+	return validPaths, nil
 }
 
 // calculate total of all names given in the array
@@ -72,7 +72,10 @@ func costTotal(paths *[]string, textbox *walkMain.TextEdit) float64 {
 	total := 0.0
 	textbox.SetText("")
 	for _, filename := range *paths {
-		cost := calcCost(filename, "_")
+		cost,err := calcCost(filename, "_")
+		if err != nil {
+			fatalDialogAndLog(err.Error())
+		}
 		total += cost
 		_, name := filepath.Split(filename)
 		textbox.AppendText(fmt.Sprintf("%s **Cost: %.2f**\r\n", name, cost))
@@ -81,16 +84,15 @@ func costTotal(paths *[]string, textbox *walkMain.TextEdit) float64 {
 }
 
 // calcCost returns the cost of a single name
-func calcCost(filename string, sep string) float64 {
+func calcCost(filename string, sep string) (float64,error) {
 	filename = strings.TrimRight(filename, filepath.Ext(filename))
 	split := strings.Split(filename, sep)
 	end := split[len(split)-1]
 	cost, err := strconv.ParseFloat(end, 64)
 	if err != nil {
-		fatalDialogAndLog(fmt.Sprintf("calcCost>strconv.ParseFloat: %v", err))
-		return 0.0
+		return 0.0, fmt.Errorf("calcCost>strconv.ParseFloat: %v", err)
 	}
-	return cost
+	return cost,nil
 }
 
 func openFolderDialog(textBox *walkMain.TextEdit) {
@@ -108,13 +110,19 @@ func openFolderDialog(textBox *walkMain.TextEdit) {
 	} else if err != nil {
 		panicAndLog("openFolderDialog>zenityQuestion" + err.Error())
 	}
-	files := scanFolder(selectedFolder)
+
+	files,err := scanFolder(selectedFolder)
+	if err != nil {
+		panicAndLog(fmt.Sprint("openFolderDialog>scanFolder: %v", err))
+	}
+
 	textBox.SetText("")
 	for _, file := range files {
 		if !slices.Contains(globalFiles, file) {
 			globalFiles = append(globalFiles, file) // add any new files
 		}
 	}
+
 	for _, file := range globalFiles {
 		textBox.AppendText(file + "\r\n")
 	}
